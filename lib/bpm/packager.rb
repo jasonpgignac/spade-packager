@@ -1,3 +1,4 @@
+require 'bpm/base'
 require 'libgems'
 require 'libgems_ext'
 
