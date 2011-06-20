@@ -21,7 +21,7 @@ module BPM::Packager::CLI
 
       template "LICENSE.txt"
       template "README.md"
-      template "package.json"
+      template "project.json"
 
       empty_directory "lib"
       empty_directory "tests"
