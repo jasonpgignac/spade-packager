@@ -1,4 +1,4 @@
-module Spade::Packager::CLI
+module BPM::Packager::CLI
   class ProjectGenerator
     include Thor::Actions
 

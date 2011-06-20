@@ -1,4 +1,4 @@
-module Spade::Packager
+module BPM::Packager
   class Repository
     attr_accessor :creds
 

@@ -1,10 +1,10 @@
 require 'thor'
 require 'highline'
 
-module Spade
+module BPM
   module Packager
     module CLI
-      LOGIN_MESSAGE = "Please login first with `spade login`."
+      LOGIN_MESSAGE = "Please login first with `bpm login`."
 
       class Base < Thor
 
@@ -13,9 +13,9 @@ module Spade
           :desc => 'Show additional debug information while running'
 
         desc "owner", "Manage users for a package"
-        subcommand "owner", Spade::Packager::CLI::Owner
+        subcommand "owner", BPM::Packager::CLI::Owner
 
-        desc "install [PACKAGE]", "Installs one or many spade packages"
+        desc "install [PACKAGE]", "Installs one or many bpm packages"
         method_option :version,    :type => :string,  :default => ">= 0", :aliases => ['-v'],    :desc => 'Specify a version to install'
         method_option :prerelease, :type => :boolean, :default => false,  :aliases => ['--pre'], :desc => 'Install a prerelease version'
         def install(*packages)
@@ -23,7 +23,7 @@ module Spade
 
           begin
             packages.each do |package|
-              installed = Spade::Packager::Remote.new.install(package, options[:version], options[:prerelease])
+              installed = BPM::Packager::Remote.new.install(package, options[:version], options[:prerelease])
               installed.each do |spec|
                 say "Successfully installed #{spec.full_name}"
               end
@@ -37,16 +37,16 @@ module Spade
           end
         end
 
-        desc "installed [PACKAGE]", "Shows what spade packages are installed"
+        desc "installed [PACKAGE]", "Shows what bpm packages are installed"
         def installed(*packages)
-          local = Spade::Packager::Local.new
+          local = BPM::Packager::Local.new
           index = local.installed(packages)
           print_specs(packages, index)
         end
 
         desc "uninstall [PACKAGE]", "Uninstalls one or many packages"
         def uninstall(*packages)
-          local = Spade::Packager::Local.new
+          local = BPM::Packager::Local.new
           if packages.size > 0
             packages.each do |package|
               if !local.uninstall(package)
@@ -58,10 +58,10 @@ module Spade
           end
         end
 
-        desc "login", "Log in with your Spade credentials"
+        desc "login", "Log in with your bpm credentials"
         def login
           highline = HighLine.new
-          say "Enter your Spade credentials."
+          say "Enter your bpm credentials."
 
           begin
             email = highline.ask "\nEmail:" do |q|
@@ -79,7 +79,7 @@ module Spade
 
           say "\nLogging in as #{email}..."
 
-          if Spade::Packager::Remote.new.login(email, password)
+          if BPM::Packager::Remote.new.login(email, password)
             say "Logged in!"
           else
             say "Incorrect email or password."
@@ -87,9 +87,9 @@ module Spade
           end
         end
 
-        desc "push", "Distribute your spade package"
+        desc "push", "Distribute your bpm package"
         def push(package)
-          remote = Spade::Packager::Remote.new
+          remote = BPM::Packager::Remote.new
           if remote.logged_in?
             say remote.push(package)
           else
@@ -102,7 +102,7 @@ module Spade
         method_option :undo,    :type => :boolean, :default => false,                        :desc => 'Unyank package'
         def yank(package)
           if options[:version]
-            remote = Spade::Packager::Remote.new
+            remote = BPM::Packager::Remote.new
             if remote.logged_in?
               if options[:undo]
                 say remote.unyank(package, options[:version])
@@ -121,7 +121,7 @@ module Spade
         method_option :all,        :type => :boolean, :default => false, :aliases => ['-a'],    :desc => 'List all versions available'
         method_option :prerelease, :type => :boolean, :default => false, :aliases => ['--pre'], :desc => 'List prerelease versions available'
         def list(*packages)
-          remote = Spade::Packager::Remote.new
+          remote = BPM::Packager::Remote.new
           index  = remote.list_packages(packages, options[:all], options[:prerelease])
           print_specs(packages, index)
         end
@@ -132,15 +132,15 @@ module Spade
             name, File.expand_path(name)).run
         end
 
-        desc "build", "Build a spade package from a package.json"
+        desc "build", "Build a bpm package from a package.json"
         def build
-          local = Spade::Packager::Local.new
+          local = BPM::Packager::Local.new
           if local.logged_in?
             package = local.pack("package.json")
             if package.errors.empty?
               puts "Successfully built package: #{package.to_ext}"
             else
-              failure_message = "Spade encountered the following problems building your package:"
+              failure_message = "bpm encountered the following problems building your package:"
               package.errors.each do |error|
                 failure_message << "\n* #{error}"
               end
@@ -151,16 +151,16 @@ module Spade
           end
         end
 
-        desc "unpack [PACKAGE]", "Extract files from a spade package"
+        desc "unpack [PACKAGE]", "Extract files from a bpm package"
         method_option :target, :type => :string, :default => ".", :aliases => ['-t'], :desc => 'Unpack to given directory'
         def unpack(*paths)
-          local = Spade::Packager::Local.new
+          local = BPM::Packager::Local.new
 
           paths.each do |path|
             begin
               package     = local.unpack(path, options[:target])
               unpack_path = File.expand_path(File.join(Dir.pwd, options[:target], package.to_full_name))
-              puts "Unpacked spade into: #{unpack_path}"
+              puts "Unpacked bpm package into: #{unpack_path}"
             rescue Errno::EACCES, LibGems::FilePermissionError => ex
               abort "There was a problem unpacking #{path}:\n#{ex.message}"
             end
@@ -174,17 +174,17 @@ module Spade
           end
 
           def print_specs(packages, index)
-            spades = {}
+            bpm_packages = {}
 
             index.each do |(name, version, platform)|
-              spades[name] ||= []
-              spades[name] << version
+              bpm_packages[name] ||= []
+              bpm_packages[name] << version
             end
 
-            if spades.size.zero?
+            if bpm_packages.size.zero?
               abort %{No packages found matching "#{packages.join('", "')}".}
             else
-              spades.each do |name, versions|
+              bpm_packages.each do |name, versions|
                 puts "#{name} (#{versions.sort.reverse.join(", ")})"
               end
             end
