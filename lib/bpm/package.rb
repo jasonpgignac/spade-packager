@@ -5,7 +5,7 @@ module BPM
     EXT      = "spd"
     METADATA = %w[keywords licenses engines main bin directories]
     FIELDS   = %w[name version description author homepage summary]
-    attr_accessor :metadata, :lib_path, :test_path, :errors, :json_path, :attributes, :directories, :dependencies
+    attr_accessor :metadata, :lib_path, :tests_path, :errors, :json_path, :attributes, :directories, :dependencies
     attr_accessor *FIELDS
 
     def initialize(email = "")
@@ -29,7 +29,7 @@ module BPM
         spec.description       = description
         spec.requirements      = [metadata.to_json]
         spec.files             = directory_files + ["package.json"]
-        spec.test_files        = glob_files(test_path) if test_path
+        spec.test_files        = glob_files(tests_path) if tests_path
         spec.bindir            = bin_path
         spec.executables       = bin_files.map{|p| File.basename(p) } if bin_path
         # TODO: IS this right?
@@ -71,7 +71,7 @@ module BPM
     private
 
     def directory_files
-      directories.values.map{|dir| glob_files(dir) }.flatten
+      directories.reject{|k,_| k == 'tests' }.values.map{|dir| glob_files(dir) }.flatten
     end
 
     def bin_files
@@ -87,11 +87,11 @@ module BPM
     end
 
     def lib_path
-      @directories["lib"]
+      @directories["lib"] || "lib"
     end
 
-    def test_path
-      @directories["test"]
+    def tests_path
+      @directories["tests"]
     end
 
     def parse
@@ -111,14 +111,25 @@ module BPM
     end
 
     def validate_paths
-      %w[lib test].all? do |directory|
-        path = send("#{directory}_path")
-        if path.nil? || File.directory?(File.join(Dir.pwd, path))
-          true
-        else
-          add_error "'#{path}' specified for #{directory} directory, is not a directory"
+      success = true
+
+      if paths = [*lib_path]
+        non_dirs = paths.reject{|p| File.directory?(File.join(Dir.pwd, p)) }
+        if paths.empty?
+          add_error "A lib directory is required"
+          success = false
+        elsif !non_dirs.empty?
+          add_error "#{non_dirs.map{|p| "'#{p}'" }.join(", ")}, specified for lib directory, is not a directory"
+          success = false
         end
       end
+
+      unless tests_path.nil? || File.directory?(File.join(Dir.pwd, tests_path))
+        add_error "'#{tests_path}', specified for tests directory, is not a directory"
+        success = false
+      end
+
+      success
     end
 
     def validate_version
